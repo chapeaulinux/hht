@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Hardware Helper
+Comment=Inspect your system's hardware information and configure third-party drivers
+Icon=cs-drivers
+Exec=/usr/bin/hht
+Terminal=false
+Type=Application
+Categories=KDE;GNOME;GTK;Settings;DesktopSettings;HardwareSettings;X-XFCE-SettingsDialog;X-XFCE-HardwareSettings;
+

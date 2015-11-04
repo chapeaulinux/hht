@@ -1,0 +1,1147 @@
+#!/bin/sh
+# Hardware Helper Tool v0.1
+
+## Variables
+# Paths
+shared=/usr/share/hht
+ubin=/usr/bin
+usbin=/usr/sbin
+cachedir=~/.cache/hht
+devcachedir=${cachedir}/info
+logdir=~/.cache/hht/log
+
+# Refs
+this=HHT
+today=$(${ubin}/date +%Y%m%d)
+OLDIFS=$IFS
+tab=$(echo -e "\t")
+dname=yad
+distro=Chapeau
+
+# Files
+config=/etc/hht.conf
+dialogue=${ubin}/${dname}
+pm=${ubin}/dnf
+rpm=${ubin}/rpm
+lsusb=${ubin}/lsusb
+lspci=${usbin}/lspci
+log=${logdir}/hht_${today}.log
+pkglog=${logdir}/pkg_${today}_$$.log
+tmp=${logdir}/tmp.$$
+pcicache=${devcachedir}/pcidevices.list
+usbcache=${devcachedir}/usbdevices.list
+devlist=${devcachedir}/devices.list
+drvlist=${devcachedir}/drivers.list
+sys_summ=${devcachedir}/sys_summary
+gfx_summ=${devcachedir}/gfx_summary
+gfx_status=${devcachedir}/gfx_status
+net_summ=${devcachedir}/net_summary
+optirun=${ubin}/optirun
+primusrun=${ubin}/primusrun
+gfxcbtmp=${devcachedir}/gfxcbtmp
+gfxcurtmp=${devcachedir}/gfxcurtmp
+gfxsystmp=${devcachedir}/gfxsystmp
+updateflag=${cachedir}/refresh_next_run
+changeflag=${cachedir}/system_changed
+
+# Local
+kernel=$(uname -r)
+dist=$(echo $(head -1 /etc/issue | sed -e 's/release//' -e 's/[0-9].*//'))
+distrelease=$(echo -e "$(head -1 /etc/issue)" | head -1)
+arch=$(uname -i)
+sudo="${ubin}/pkexec"
+
+# Interface
+mainheight=550
+mainwidth=700
+alertwidth=250
+mainmargin=10
+export wtitle="$dist Hardware Helper Tool"
+export monofont="Liberation Mono Regular"
+
+# Images
+gnome_16=/usr/share/icons/gnome/16x16
+gnome_48=/usr/share/icons/gnome/48x48
+hicolor_16=/usr/share/icons/gnome/16x16
+hicolor_48=/usr/share/icons/gnome/48x48
+moka_16=/usr/share/icons/Moka/16x16
+moka_48=/usr/share/icons/Moka/48x48
+moka_64=/usr/share/icons/Moka/64x64
+
+if [[ -d $moka_16 ]] && [[ -d $moka_48 ]]
+then
+	refresh_btn_icon=${moka_16}/actions/system-restart.png
+	cogs_btn_icon=${moka_16}/actions/system-run.png
+	exit_btn_icon=${moka_16}/actions/exit.png
+	module_btn_icon=${moka_16}/mimetypes/applications-system.png
+	pci_btn_icon=${moka_16}/categories/applications-electronics.png
+	usb_btn_icon=${moka_16}/devices/drive-removable-media-usb.png
+	view_btn_icon=${moka_16}/apps/search.png
+	gfx_btn_icon=${moka_16}/categories/applications-graphics.png
+	back_btn_icon=$exit_btn_icon
+	pci_icon=${moka_48}/categories/applications-utilities.png
+	usb_icon=${moka_48}/devices/drive-removable-media-usb.png
+	display_icon=${moka_48}/devices/display.png
+	net_icon=${moka_48}/devices/network-wired.png
+	bluetooth_icon=${moka_48}/apps/bluetooth.png
+	disk_icon=${moka_48}/devices/drive-harddisk.png
+	warn_icon=${moka_48}/status/dialog-warning.png
+	error_icon=${moka_48}/status/dialog-error.png
+	info_icon=${moka_48}/status/dialog-info.png
+else
+	refresh_btn_icon=${moka_16}/actions/system-restart.png
+	cogs_btn_icon=${moka_16}/actions/system-run.png
+	exit_btn_icon=${moka_16}/actions/exit.png
+	module_btn_icon=${moka_16}/mimetypes/applications-system.png
+	pci_btn_icon=${moka_16}/categories/applications-electronics.png
+	usb_btn_icon=${moka_16}/devices/drive-removable-media-usb.png
+	view_btn_icon=${moka_16}/apps/search.png
+	gfx_btn_icon=${moka_16}/categories/applications-graphics.png
+	back_btn_icon=${gnome_16}/actions/edit-undo.png
+	pci_icon=${gnome_48}/devices/audio-card.png
+	usb_icon=${gnome_48}/devices/media-removable.png
+	display_icon=${icons_48}/devices/display.png
+	net_icon=${gnome_48}/devices/network-wired.png
+	bluetooth_icon=${hicolor_48}/apps/bluetooth.png
+	disk_icon=${gnome_48}/devices/drive-harddisk.png
+	warn_icon=${gnome_48}/status/dialogue-warning.png
+	error_icon=${gnome_48}/status/dialogue-error.png
+	info_icon=${gnome_48}/status/dialogue-information.png
+fi
+mainimg=${shared}/hht_left_banner.png
+gfximg=${shared}/hht_left_banner.png
+distimg=/usr/share/pixmaps/fedora-logo-small.png
+
+# Packages
+nvidiapkgs="akmod-nvidia vdpauinfo libva-vdpau-driver libva-utils xorg-x11-drv-nvidia-libs.i686"
+nvidiarem="nvidia-kmod"
+nvidialegacypkgs="akmod-nvidia-340xx xorg-x11-drv-nvidia-340xx-libs.i686"
+nvlegver=340
+bbeefreerepo="http://install.linux.ncsu.edu/pub/yum/itecs/public/bumblebee/fedora22/noarch/bumblebee-release-1.2-1.noarch.rpm"
+bbeenonfreerepo="http://install.linux.ncsu.edu/pub/yum/itecs/public/bumblebee-nonfree/fedora22/noarch/bumblebee-nonfree-release-1.2-1.noarch.rpm"
+bbeedeps="libbsd-devel libbsd glibc-devel libX11-devel help2man autoconf git tar glib2 glib2-devel kernel-devel kernel-headers automake gcc gtk2-devel"
+bbeefree="bbswitch-dkms bumblebee-nouveau"
+bbeenonfree="bbswitch-dkms bumblebee-nvidia.${arch} VirtualGL.${arch} VirtualGL.i686 primus.${arch} primus.i686"
+
+# Graphics Configuration Descriptions
+nvidiagfx="Nvidia graphics"
+optimus="Nvidia Optimus"
+intelgfx="Intel graphics"
+radeon="Radeon Graphics"
+#intelcb=$intelgfx
+nouveaucb="Nouveau open-source driver"
+nvidiacb="Nvidia proprietory driver"
+nvidialegcb="Nvidia proprietory legacy driver"
+intoptmscb="${intelgfx}, No Optimus switching support"
+nvidoptmscb="$optimus (with ${nvidiacb})"
+nouvoptmscb="$optimus (with ${nouveaucb})"
+
+# Configurables
+autorefreshdays=1
+if [[ -r $config ]] && [[ -s $config ]]
+then
+	. $config
+fi
+
+
+## Functions
+
+logstart ()
+{
+	>>$log
+	${ubin}/date >> $log
+	echo "------------------------" >> $log
+}
+
+abort ()
+{
+	exit 1
+}
+export -f abort
+
+refresh ()
+{
+	rm -rf ${devcachedir}/*
+
+	## Bumblebee support
+	$optirun --version >>/dev/null 2>&1
+	if [[ $? = 0 ]]
+	then
+		cmdpfx=$optirun
+	fi
+	$primusrun echo >>/dev/null 2>&1
+	if [[ $? = 0 ]]
+	then
+		cmdpfx=$primusrun
+	fi
+
+
+	## USB devices
+
+	echo "Refreshing USB device list" >> $log
+	echo 2
+	>$usbcache
+	errortext="FATAL: Could not list USB devices"
+	$lsusb | while read a b c d e f g
+	do
+		usbbusdev=$(echo "${b}-${d}" | tr -d ":")
+		usbdevid=$f
+		usbdevdesc=$g
+		echo -e "${usbbusdev}|${usbdevid}|${usbdevdesc}|\c" >>$usbcache
+		lsusb -v -d $usbdevid >${devcachedir}/${usbbusdev}
+	done || ( errorbox ; exit 1 )
+
+	echo 9
+
+
+	## PCI Devices
+
+	echo "Refreshing PCI device list" >> $log
+	errortext="FATAL: Could not query device list"
+	$cmdpfx $lspci -m > $pcicache || ( errorbox ; exit 1 )
+	sed -i -e 's/ \"/\|/g' $pcicache
+	sed -i -e 's/-[r|p][0-9a-z]*//g' -e 's/\"//g' $pcicache
+
+	IFS="\|"
+	cat $pcicache | while read a b
+	do
+		$cmdpfx $lspci -kvvs $a >${devcachedir}/${a}
+	done
+	echo 45
+
+
+	## GPUs
+
+	echo "Finding GPUs" >> $log
+	grep -Ei 'vga|3d|2d' $pcicache | while read dev x
+	do
+		test -n "$dev" && $cmdpfx $lspci -v -s $dev > ${devcachedir}/gpu_${dev}
+	done
+	echo 48
+	unset x
+
+
+	## NICs
+
+	echo "Finding NICs" >> $log
+	grep -Ei 'ethernet|network' $pcicache | while read dev x
+	do
+		test -n "$dev" && $lspci -v -s $dev > ${devcachedir}/net_${dev}
+	done
+	echo 51
+	unset x
+
+
+	# Wireless LAN
+
+	echo "Finding Wireless network devices" >> $log
+	grep -i 'wireless' $pcicache | while read dev x
+	do
+		test -n "$dev" && $lspci -v -s $dev > ${devcachedir}/wlan_${dev}
+	done
+	echo 54
+
+	IFS=$OLDIFS
+
+
+	## CPUs
+
+	models=$(grep "model name" /proc/cpuinfo | cut -d: -f2 | uniq)
+	sockets=$(grep "physical id" /proc/cpuinfo | uniq | wc -l)
+	cores=$(grep "core id" /proc/cpuinfo | wc -l)
+	(( hthreads = ( $(grep ^flags /proc/cpuinfo | grep " ht " | wc -l) * 2 ) ))
+
+
+	## System Overview
+
+	echo "Writing Summary" >> $log
+	echo "<b><span size=\"x-large\">System</span></b>" >$sys_summ
+	echo "<b>$(echo ${distrelease}|sed 's/^\s*//g') with $(uname -s) kernel $(uname -r | cut -d- -f1)</b>" >>$sys_summ
+	echo 60
+	xx=1
+	echo "${models}" | while read x
+	do
+		echo "Processor ${xx}${tab}${tab}: <b>${x}</b>" | sed -e 's/(R)//g' -e 's/(TM)//g' >>$sys_summ
+		let "xx += 1"
+	done
+	echo 63
+	echo 66
+	echo "System memory${tab}: <b>$( echo "$(grep ^MemTotal /proc/meminfo | awk '{ print $2 }') / 1000" | bc) MB</b>" >>$sys_summ
+	echo "Swap space${tab}${tab}: <b>$( echo "$(grep ^SwapTotal /proc/meminfo | awk '{ print $2 }') / 1000" | bc) MB</b>" >>$sys_summ
+	echo 68
+
+
+	## Graphics Overview
+
+	gpus=$(grep -sh "^[0-9][0-9].*" ${devcachedir}/gpu_* | cut -d: -f3 | cut -d"(" -f1 | sed -e 's/^\s*//' -e 's/\s*$//' )
+	gfxdrivers=$(grep -ish "kernel modules" ${devcachedir}/gpu_* | awk -F ":" '{ print $NF }' | tr -d "," | sed -e 's/^\s*//' -e 's/\s*$//' )
+	bbeeinstalled=$($rpm -qa | egrep -E -e bbswitch -e "^bumblebee.*[i.86|x86_64]$")
+	gfxdrvused=$(grep -ish "kernel driver in use" ${devcachedir}/gpu_* | awk -F ":" '{ print $NF }' | tr -d "," | sed -e 's/^\s*//' -e 's/\s*$//' )
+	glxinfo=$( $cmdpfx /usr/bin/glxinfo)
+	glvendor=$( echo $( echo "$glxinfo" | grep -i "opengl vendor string" | cut -d: -f2- | sed -e 's/^\s*//' -e 's/\s*$//' ) )
+	glrenderer=$( echo $( echo "$glxinfo" | grep -i "opengl renderer string" | cut -d: -f2- | sed -e 's/^\s*//' -e 's/\s*$//' ) )
+	glversion=$( echo $( echo "$glxinfo" | grep -i "opengl version string" | cut -d: -f2- | sed -e 's/^\s*//' -e 's/\s*$//' ) )
+
+	intel=$(echo $gfxdrivers | egrep -o -e intel -e i915)
+	nvidia=$(echo $gfxdrivers | grep -o nvidia)
+	nouveau=$(echo $gfxdrivers | grep -o nouveau)
+	radeon=$(echo $gfxdrivers | grep -o radeon)
+	catalyst=$(echo $gfxdrivers | grep -o fglrx)
+
+	## Alternative graphics driver options
+
+	unset gfxcb gfxcur
+	rec=0
+
+	if [[ $(echo "$gpus" | wc -l) -gt 1 ]]
+	then
+		if [[ -n "$(echo $gpus | grep -io intel)" ]] && [[ -n "$(echo $gpus | grep -io nvidia)" ]]
+		then
+			gfxsys=$optimus
+			echo $gfxsys > $gfxsystmp
+			if [[ -n "$intel" ]] && [[ -n "$nvidia" ]] && [[ -n "$nouveau" ]] && [[ -n "$bbeeinstalled" ]]
+			then
+				gfxcur=$nvidoptmscb
+				gfxcb="^Current: ${nvidoptmscb}!${nouvoptmscb}!${intoptmscb}"
+				rec=1
+			fi
+			if [[ -n "$intel" ]] && [[ -z "$nvidia" ]] && [[ -n "$nouveau" ]] && [[ -n "$bbeeinstalled" ]]
+			then
+				gfxcur=$nouvoptmscb
+				gfxcb="^Current: ${nouvoptmscb}!${nvidoptmscb}!${intoptmscb}"
+			fi
+			if [[ -n "$intel" ]] && [[ -z "$bbeeinstalled" ]]
+			then
+				gfxcur=$intoptmscb
+				gfxcb="^Current: ${intoptmscb}!${nvidoptmscb}!${nouvoptmscb}"
+			fi
+		fi
+	else
+		if [[ -n "$(echo $gpus | grep -io nvidia)" ]]
+		then
+			gfxsys=$nvidiagfx
+			echo $gfxsys > $gfxsystmp
+			#nvver=$(grep -si "version:" ${devcachedir}/nvidia | awk '{ print $2 }')
+			nvver=$(grep -si "nvrm version" /proc/driver/nvidia/version | awk '{ print $8 }')
+			nvcurrent=$(echo $nvver'>'$nvlegver|bc -l)
+			if [[ -n "$nvidia" ]]
+			then
+				gfxcur=$nvidiacb
+				if [[ $nvcurrent = 1 ]]
+				then
+					gfxcb="^Current: ${nvidiacb}!${nouveaucb}!${nvidialegcb}"
+					rec=1
+				elif [[ $nvcurrent = 0 ]]
+				then
+					gfxcb="^Current: ${nvidialegcb}!${nvidiacb}!${nouveaucb}"
+				else
+					gfxcb="^Current: ${nvidiacb}!${nouveaucb}"
+				fi
+			else
+				gfxcur=$nouveaucb
+				gfxcb="^Current: ${nouveaucb}!${nvidiacb}!${nvlegacycb}"
+			fi
+
+		elif [[ -n "$(echo $gpus | grep -io radeon)" ]]
+		then
+			gfxsys=$radeon
+			echo $gfxsys > $gfxsystmp
+			rec=1
+
+		elif [[ -n "$(echo $gpus | grep -io intel)" ]]
+		then
+			gfxsys=$intel
+			echo $gfxsys > $gfxsystmp
+			rec=1
+		else
+			gfxsys=Other
+			echo $gfxsys > $gfxsystmp
+			rec=1
+		fi
+	fi
+	echo "$gfxcb" >$gfxcbtmp
+	echo "$gfxcur" >$gfxcurtmp
+
+	echo 73
+	if [[ "$gfxsys" = "other" ]]
+	then
+		echo -e "\n<b><span size=\"x-large\">Graphics</span></b>" >>$gfx_summ
+	else
+		echo -e "\n<b><span size=\"x-large\">${gfxsys}</span></b>" >>$gfx_summ
+	fi
+	if [[ $rec = 1 ]]
+	then
+		echo "<i><span size=\"large\">You are running the recommended graphics drivers for your system</span></i>" >>$gfx_status
+	else
+		echo "<i><span size=\"large\">There are other graphics driver options available for your system</span></i>" >>$gfx_status
+	fi
+	n=1
+	echo "${gpus}" | while read xx
+	do
+		if [[ -n "$(echo $xx | grep "\[")" ]] && [[ -n "$(echo $xx | grep "\]")" ]]
+		then
+			xx=$(echo $xx | cut -d"[" -f2 | tr -d ']')
+		fi
+		#echo "GPU${n}${tab}${tab}${tab}: <b>${xx}</b>" | sed "s/\[/\n${tab}${tab}${tab}  /g" | tr -d ']' >>$gfx_summ
+		echo "GPU${n}${tab}${tab}${tab}: <b>${xx}</b>" >>$gfx_summ
+		let "n += 1"
+	done
+
+	echo -e "Installed drivers  ${tab}: <b>$(echo ${gfxdrivers} | sed 's/\s/<\/b> + <b>/g')</b>" >>$gfx_summ
+	if [[ -n "$gfxdrvused" ]]
+	then
+		echo -e "Driver in use${tab}${tab}: <b>"${gfxdrvused}"</b>" >>$gfx_summ
+	fi
+
+
+	if [[ -n "$glvendor" ]]
+	then
+		echo "OpenGL vendor${tab}: <b>${glvendor}</b>" >>$gfx_summ
+	fi
+	#if [[ -n "$glrenderer" ]]
+	#then
+		#echo "OpenGL renderer${tab}: $glrenderer" >>$gfx_summ
+	#fi
+	#if [[ -n "$glversion" ]]
+	#then
+		#echo "OpenGL version${tab}: $glversion" >>$gfx_summ
+	#fi
+	#if [[ -n "$gfxcb" ]]
+	#then
+		#echo "<b>Alternative drivers are available</b>" >>$gfx_summ
+	#fi
+	echo >>$gfx_summ
+	echo >>$gfx_summ
+	echo >>$gfx_summ
+	echo 76
+
+	
+	## Network
+
+	#echo -e "\n<b><span size=\"x-large\">Network</span></b>" >>$net_summ
+	echo 79
+
+
+	## Refresh package manager cache
+
+	echo "Refreshing $pm cache" >>$log
+	#$pm -y makecache
+	echo 92
+
+
+	## Kernel modules
+
+	echo "Collecting kernel module info" >>$log
+	cat /proc/modules | while read drv xx
+	do
+		drvmodinfo=$(modinfo $drv)
+		drvmodver=$(echo $(echo "$drvmodinfo" | grep -i "^version") | cut -d" " -f2-)
+		if [[ -z "$drvmodver" ]]
+		then
+			drvmodver="Unknown"
+		fi
+		drvmoddesc=$(echo $(echo "$drvmodinfo" | grep -i "^description") | cut -d" " -f2-)
+		if [[ -z "$drvmoddesc" ]]
+		then
+			drvmoddesc="None"
+		fi
+		drvmodauth=$(echo $(echo "$drvmodinfo" | grep -i "^author") | cut -d" " -f2- | cut -d"<" -f1)
+		if [[ -z "$drvmodauth" ]]
+		then
+			drvmodauth="Unknown"
+		fi
+		drvmodfile=$(echo $(echo "$drvmodinfo" | grep -i "^filename") | cut -d" " -f2-)
+		echo "$drvmodinfo" >${devcachedir}/${drv}
+		echo -e "${drv}|${drvmoddesc}|${drvmodver}|${drvmodauth}|\c" >>$drvlist
+		unset drv drvmodinfo drvmoddesc drvmodver drvmodauth
+	done
+	echo 100
+
+	unset x
+	unset dev
+	rm -f $updateflag
+}
+export -f refresh
+
+main ()
+{
+
+	unset gfxcombo
+	gfxcb=$(cat $gfxcbtmp 2>/dev/null)
+	if [[ -n "$gfxcb" ]]
+	then
+		$dialogue \
+		--always-print-result \
+		--fixed \
+		--width=$mainwidth \
+		--title="$wtitle" \
+		--name="$wtitle" \
+		--center \
+		--borders=$mainmargin \
+		--window-icon=$distimg \
+		--text="$(cat $sys_summ $gfx_summ)
+
+" \
+		--form \
+		--image=$mainimg \
+		--buttons-layout=center \
+		--button="  Refresh!${refresh_btn_icon}":1 \
+		--button="  Graphics Drivers!${gfx_btn_icon}":2 \
+		--button="  PCI Browser!${cogs_btn_icon}":3 \
+		--button="  USB Browser!${usb_btn_icon}":4 \
+		--button="     Exit!${exit_btn_icon}":0
+		#--button="  Advanced!${cogs_btn_icon}":1 \
+		#--field="Driver selection :CB" "$gfxcb" \
+	else
+		$dialogue \
+		--image=$mainimg \
+		--width=$mainwidth \
+		--title="$wtitle" \
+		--name="$wtitle" \
+		--center \
+		--borders=$mainmargin \
+		--window-icon=$distimg \
+		--text="$(cat $sys_summ $gfx_summ)
+
+" \
+		--form \
+		--buttons-layout=center \
+		--button="  Refresh!${refresh_btn_icon}":1 \
+		--button="  PCI Browser!${cogs_btn_icon}":3 \
+		--button="  USB Browser!${usb_btn_icon}":4 \
+		--button="     Exit!${exit_btn_icon}":0
+	fi
+}
+
+
+advanced ()
+{
+# Advanced view icons
+advicons="PCI Devices
+pci
+$pci_icon
+pcibrowser
+false
+USB Devices
+usb
+$usb_icon
+usbbrowser
+false
+Disks
+disks
+$disk_icon
+gnome-disks
+false
+Network Settings
+net
+$net_icon
+gnome-control-center network
+false
+Bluetooth Settings
+bluetooth
+$bluetooth_icon
+gnome-control-center bluetooth
+false
+Display Settings
+display
+$display_icon
+gnome-control-center display
+false
+"
+
+	echo "$advicons" | $dialogue \
+	--icons \
+	--listen \
+	--single-click \
+	--height=$mainheight \
+        --width=$mainwidth \
+        --title="$wtitle" \
+        --name="$wtitle" \
+	--window-icon=$distimg \
+	--center \
+	--buttons-layout=center \
+	--single-click \
+	--button="gtk-close":0
+}
+
+flagupdate ()
+{
+	touch $updateflag
+}
+export -f flagupdate
+
+flagchange ()
+{
+	touch $changeflag
+}
+export -f flagchange
+
+searchpkg ()
+{
+	pk=$*
+	( $pm search $pk 2>&1 && $dialogue --center --title="$wtitle" --window-icon=$distimg --borders=$mainmargin --text="  Operation Completed" --buttons-layout=center --button="gtk-close":0 ) || $dialog --center --title="$wtitle" --window-icon=$distimg --borders=$mainmargin --text="  Operation Failed" --buttons-layout=center --button="gtk-close":0
+	break 2
+}
+export -f searchpkg
+
+installpkg ()
+{
+	errortext="Package installation failed!"
+	pk=$*
+	${ubin}/date | tee -a $pkglog
+	echo "Installing requested packages;" | tee -a $pkglog
+	echo "$pk" | tee -a $pkglog
+	echo "-----------------------------------------------" | tee -a $pkglog
+	$pm -y --nogpgcheck install $pk 2>&1 | tee -a $pkglog
+	if [[ ${PIPESTATUS[0]} -ne 0 ]]
+	then
+		errorbox
+	fi
+}
+export -f installpkg
+
+removepkg ()
+{
+	errortext="Package removal failed!"
+	pk=$*
+	${ubin}/date >>$pkglog
+	echo "Removing requested packages;" | tee -a $pkglog
+	echo "$pk" | tee -a $pkglog
+	echo "-----------------------------------------------" | tee -a $pkglog
+	$pm -y --nogpgcheck remove $* 2>&1 | tee -a $pkglog
+	if [[ ${PIPESTATUS[0]} -ne 0 ]]
+	then
+		errorbox
+	fi
+	
+}
+export -f removepkg
+
+setupbbeerepo ()
+{
+	bbeefreerepoconf=$(dnf repolist all | grep '^bumblebee ')
+	bbeenonfreerepoconf=$(dnf repolist all | grep '^bumblebee-nonfree')
+	if [[ -z "$bbeefreerepoconf" ]] || [[ -z "$bbeenonfreerepoconf" ]]
+	then
+		errortext="Installation of the Bumblebee software repository failed!\nCannot continue."
+		( installpkg $bbeefreerepo && installpkg $bbeenonfreerepo ) || ( errorbox ; break )
+	fi
+	if [[ -n "$(echo $bbeefreerepoconf | grep disabled)" ]]
+	then
+		errortext="Could not enable the bumblebee-free software repository!\nCannot continue."
+		$pm config-manager --set-enabled bumblebee 2>&1 || ( errorbox ; break )
+	fi
+	if [[ -n "$(echo $bbeenonfreerepoconf | grep disabled)" ]]
+	then
+		errortext="Could not enable the bumblebee-nonfree software repository!\nCannot continue."
+		$pm config-manager --set-enabled bumblebee-nonfree 2>&1 || ( errorbox ; break )
+	fi
+	$pm makecache 2>&1
+}
+export -f setupbbeerepo
+
+bbeelaunchers ()
+{
+	arg=$1
+	if [[ "$arg" = "optirun" ]] || [[ "$arg" = "primusrun" ]]
+	then
+		echo
+		echo
+		echo "NOTE:"
+		echo "  Unlike on Microsoft Windows, drivers for Nvidia Optimus systems running Linux do not auto-switch"
+		echo "  to the Nvidia hardware when running particular programs. This is because Nvidia have not made this"
+		echo "  functionality available for the general Linux community"
+		echo "  To use the Nvidia GPU one must execute each program with a prefix command, 'optirun' for using"
+		echo "  the open-source Nouveau driver & 'primusrun' for when performant 3D acceleration is needed using"
+		echo "  the proprietary Nvidia driver."
+		echo "  This tool will automatically update some desktop icons to use the appropriate prefix for you,"
+		echo "  including any icons for games you currently have installed from the Steam client, for other programs"
+		echo "  you will have to either run them from a terminal with the correct prefix or amend the program's"
+		echo "  desktop launcher file/s manually"
+		echo
+		echo "	For more information on the Nvidia Optimus support for ${distro} visit the Bumblebee Project's"
+		echo "  wiki at https://fedoraproject.org/wiki/Bumblebee"
+		echo
+		echo
+		echo "Updating Steam & PlayonLinux desktop icons to use ${arg}"
+		sed -i "s/^Exec=.*steam /Exec=${arg} steam /g" /home/*/.local/share/applications/*desktop
+		if [[ -f /usr/share/applications/steam.desktop ]]
+		then
+			sed -e "s/^Exec=.*steam /Exec=${arg} steam /g" -e "s/^Name=Steam/Name=Steam (${arg})/g" /usr/share/applications/steam.desktop >/usr/share/applications/${arg}-steam.desktop
+		fi
+		if [[ -f /usr/share/applications/PlayOnLinux.desktop ]]
+		then
+			sed -e "s/^Exec=playonlinux/Exec=${arg} playonlinux/g" -e "s/^Name=PlayOnLinux/Name=PlayOnLinux (${arg})/g" /usr/share/applications/PlayOnLinux.desktop >/usr/share/applications/${arg}-PlayOnLinux.desktop
+		fi
+		echo " ... done"
+		echo
+		echo
+
+	elif [[ "$arg" = "default" ]]
+	then
+		echo
+		echo
+		echo -e "\n\nRemoving any Bumblebee prefixes from Steam & PlayonLinux desktop icons"
+		sed -i "s/^Exec=.*steam /Exec=steam /g" /home/*/.local/share/applications/*desktop
+		rm -f /usr/share/applications/*-steam.desktop /usr/share/applications/*-PlayOnLinux.desktop
+		echo " ... done"
+		echo
+		echo
+	else
+		echo "Invalid argument passed to bumblebee-ize launchers function"
+	fi
+}
+export -f bbeelaunchers
+
+finmsg ()
+{
+	echo -e "===============================================\nOperation finished, you can now close this window"
+}
+export -f finmsg
+
+usbbrowser ()
+{
+	IFS="\|"
+	$dialogue --list \
+	--height=$mainheight \
+	--width=$mainwidth \
+	--borders=$mainmargin \
+	--title="USB Devices" \
+	--window-icon=$distimg \
+	--name="$wtitle" \
+	--center --buttons-layout=center --window-icon=$distimg --borders=$mainmargin \
+	--button=" View selected!${view_btn_icon}":2 \
+	--button="   Back!${exit_btn_icon}":1 \
+	--print-column=1 \
+	--text="Select a device to view its detailed information" \
+	--column="ID" --column="Description" --column="Bus/Device" \
+	$( cat $usbcache )
+	echo $? > $tmp
+	IFS=$OLDIFS
+}
+
+pcibrowser ()
+{
+	IFS="\|"
+	$dialogue --list \
+	--height=$mainheight \
+	--width=$mainwidth \
+	--borders=$mainmargin \
+	--title="PCI Devices" \
+	--window-icon=$distimg \
+	--name="$wtitle" \
+	--center --buttons-layout=center --window-icon=$distimg --borders=$mainmargin \
+	--button=" View selected!${view_btn_icon}":2 \
+	--button="   Back!${exit_btn_icon}":1 \
+	--print-column=1 \
+	--text="Select a device to view detailed information" \
+	--column="PCI Slot" --column="Name" --column="Class" --column="Vendor" \
+	$( cat $pcicache | awk -F '|' '/^[0-9].*/ { printf $1"|"$4"|"$2"|"$3"|" }' )
+	echo $? > $tmp
+	IFS=$OLDIFS
+}
+
+driverbrowser ()
+{
+	IFS="\|"
+	$dialogue --list \
+	--height=$mainheight \
+	--width=$mainwidth \
+	--borders=$mainmargin \
+	--title="Loaded drivers" \
+	--window-icon=$distimg \
+	--name="$wtitle" \
+	--center --buttons-layout=center --window-icon=$distimg --borders=$mainmargin \
+	--button=" View selected!${view_btn_icon}":2 \
+	--button="   Back!${exit_btn_icon}":1 \
+	--print-column=1 \
+	--text="Select a driver to view detailed information" \
+	--column="Module" --column="Description" --column="Version" --column="Author"  \
+	$( cat $drvlist )
+	echo $? > $tmp
+	IFS=$OLDIFS
+}
+
+gfxdrvchooser ()
+{
+	gfxcb=$(cat $gfxcbtmp 2>/dev/null)
+	$dialogue \
+	--always-print-result \
+	--width=$mainwidth \
+	--borders=$mainmargin \
+	--window-icon=$distimg \
+	--title="Choose your graphics driver" \
+	--name="$wtitle" \
+	--center --buttons-layout=center --window-icon=$distimg --borders=$mainmargin \
+	--image=$gfximg \
+	--text="$(cat $gfx_summ)
+
+$(cat $gfx_status)
+To change your graphics driver configuration select an option below and select 'Apply'\n" \
+	--form \
+	--field=":CB" "$gfxcb" \
+	--button=" Apply!${view_btn_icon}":2 \
+	--button="   Back!${exit_btn_icon}":1 \
+	echo $? > $tmp
+}
+
+infoview ()
+{
+	opt=$1
+	optdesc=$2
+	if [[ -n "$opt" ]]
+	then
+		file=${devcachedir}/${opt}
+		$dialogue --text-info --text="$optdesc" \
+			--height=$mainheight --width=$mainwidth --title="$wtitle" --name ="$wtitle" \
+			--center --buttons-layout=center --window-icon=$distimg --borders=$mainmargin \
+			--fontname="$monofont" --button="   Back!${exit_btn_icon}":1 \
+			--filename=$file
+		unset file
+	else
+		$dialogue --title="$wtitle" --name ="$wtitle" \
+			--height=$mainheight --width=$mainwidth --title="$wtitle" --name ="$wtitle" \
+			--center --buttons-layout=center --window-icon=$distimg --borders=$mainmargin \
+			--button="   Back!${exit_btn_icon}":1 \
+			--text="No Driver Selected" --text-align=center
+	fi
+}
+export -f infoview
+
+logbox ()
+{
+	$dialogue --center --title="$wtitle" --window-icon=$distimg --height=$mainheight --width=$mainwidth --borders=$mainmargin --text-align=center --text="$(echo $logboxtext)" --listen --text-info --tail --no-buttons
+}
+export -f logbox
+
+errorbox ()
+{
+	$dialogue --title="$wtitle" --image=$error_icon --center --width=$alertwidth --borders=$mainmargin --buttons-layout=center --text-align=center --window-icon=$distimg --text="$(echo "$errortext")" --button=OK:0
+}
+export -f errorbox
+
+abortbox ()
+{
+	$dialogue --title="$wtitle" --image=$error_icon --center --width=$alertwidth --borders=$mainmargin --buttons-layout=center --text-align=center --window-icon=$distimg --text="$(echo "$errortext")" --button=Abort:0
+}
+export -f abortbox
+
+infobox ()
+{
+	$dialogue --title="$wtitle" --image=$info_icon --center --width=$alertwidth --borders=$mainmargin --buttons-layout=center --text-align=center --window-icon=$distimg --text="$(echo "$infotext")" --button=OK:0
+}
+export -f infobox
+
+rebootprompt ()
+{
+	reboottext="<span size=\"large\">Your system configuration has changed</span>\nIt is recommended that you reboot your system now.\nReboot now?"
+	$dialogue --title="$wtitle" --image=$warn_icon --center --width=$alertwidth --borders=$mainmargin --buttons-layout=center --text-align=center --window-icon=$distimg --text="$(echo "$reboottext")" --button="Reboot Now!${refresh_btn_icon}":0 --button="Don't Reboot!${exit_btn_icon}":1
+	if [[ $? = 0 ]]
+	then
+		${usbin}/reboot
+	fi
+}
+
+
+### BEGIN
+
+## Check deps
+
+dv=$($dialogue --version)
+if [[ $? != 0 ]]
+then
+	echo "FATAL: $this requires the '$dname' package but it is not installed!" | tee -a $log
+	exit 1
+fi
+
+## root privs
+if [[ $(id -u) != 0 ]]
+then
+	$sudo
+	if [[ $? != 0 ]]
+	then
+		echo "$this needs root privileges"
+		exit 1
+	fi
+fi
+
+## Check/create working directories
+
+test -d $cachedir
+if [[ $? = 0 ]]
+then
+	firstrun=0
+	test -w $cachedir && test -w $devcachedir && test -w $logdir
+	if [[ $? != 0 ]]
+	then
+		errortext="<b>FATAL</b>: Write permission denied to cache directories. Try deleting $cachedir"
+		abortbox
+		abort
+	fi
+	logstart
+else
+	mkdir -p $devcachedir && mkdir -p $logdir
+	if [[ $? = 0 ]]
+	then
+		logstart
+		echo "$this cache directory created, assuming first time run" | tee -a $log
+		firstrun=1
+	else
+		errortext="<b>FATAL</b>: Could not find <b>$shared</b>"
+		abortbox
+		abort
+	fi
+fi
+
+## Update device and package info after a system change
+if [[ -f $changeflag ]]
+then
+	refresh | $dialogue --progress --width=250 --title="$wtitle" --center --window-icon=$distimg --no-buttons --text-align=center --text="Refreshing device and package data" --auto-close --auto-kill
+	rm -f $changeflag
+fi
+
+
+
+## Main
+
+while true
+do
+	## Update device and package info
+	if [[ $firstrun = 1 ]] || [[ -n "$( find $devcachedir -type f -mtime +${autorefreshdays} )" ]] || [[ -f $refreshflag ]]
+	then
+		refresh | $dialogue --progress --width=250 --title="$wtitle" --center --window-icon=$distimg --no-buttons --text-align=center --text="Refreshing device and package data" --auto-close --auto-kill
+	fi
+
+	out=$(main)
+	mainopt=$?
+	case $mainopt in
+	0)
+		exit
+	;;
+	5)
+		advanced
+		advopt=$?
+		case $advopt in
+		10)
+			while :
+			do
+				out=$(driverbrowser)
+				opt=$( echo $out | tr -d "\|" )
+				optdesc="<span size=\"x-large\">\'${opt}\' Module Details</span>"
+				choice=$(cat $tmp | tr -d "\|")
+				>$tmp
+				case $choice in
+				1)
+					break
+				;;
+				2)
+					infoview $opt
+				;;
+				esac
+			done
+		;;
+		11)
+			while :
+			do
+				out=$(pcibrowser)
+				opt=$( echo $out | tr -d "\|" )
+				optdesc="<span size=\"x-large\">$( head -1 ${devcachedir}/${opt} | cut -d: -f3 | cut -d"(" -f1 ) Details</span>"
+				choice=$(cat $tmp)
+				>$tmp
+				case $choice in
+				1)
+					break
+				;;
+				2)
+					infoview $opt "$optdesc"
+				;;
+				esac
+			done
+		;;
+		12)
+			while :
+			do
+				out=$(usbbrowser)
+				opt=$( echo $out | tr -d "\|" )
+				optdesc="<span size=\"x-large\">$( head -1 ${devcachedir}/${opt} | cut -d" " -f7- | cut -d"(" -f1 ) Details</span>"
+				choice=$(cat $tmp)
+				>$tmp
+				case $choice in
+				1)
+					break
+				;;
+				2)
+					infoview $opt
+				;;
+				esac
+			done
+		;;
+		esac
+	;;
+	1)
+		refresh | $dialogue --progress --width=250 --no-buttons --title="$wtitle" --center --window-icon=$distimg --text="Refreshing device and package data" --auto-close --auto-kill
+	;;
+	2)
+		while :
+		do
+			gfxcb=$(cat $gfxcbtmp 2>/dev/null)
+			gfxcur=$(cat $gfxcurtmp 2>/dev/null)
+			gfxsys=$(cat $gfxsystmp 2>/dev/null)
+			gfxdrvchooser
+			choice=$?
+			option=$(sed 's/Current: //g' $tmp | cut -d"|" -f1)
+			>$tmp
+
+			case $choice in
+			1)
+				break
+			;;
+			2)
+				if [[ -n "$option" ]] && [[ "$option" != "$gfxcur" ]]
+				then
+					#logboxtext="Changing driver from <b>${gfxcur}</b> to <b>${option}</b>\nKeep this window open until the operation has finished."
+					logboxtext="<span size=\"large\">Applying system changes</span>\nKeep this window open until the operation has finished."
+					( $dialogue --center --width=400 --borders=$mainmargin --buttons-layout=center --text-align=center --title="$wtitle" --window-icon=$distimg \
+					--text="<span size=\"large\">You've chosen to change this system's\nGPU driver configuration from...\n\n<b>$(echo $gfxcur|sed 's/(/\n(/')</b></span>\nto\n<span size=\"large\"><b>$(echo $option|sed 's/(/\n(/')</b></span>\n\n\n<span size=\"larger\">Apply change?</span>\n" \
+					--button=" Apply Change!${view_btn_icon}":0 \
+					--button="   Back!${exit_btn_icon}":1 \
+					&& if [[ $gfxsys = $nvidiagfx ]]
+					   then
+						if [[ $option = $nvidiacb ]]
+						then
+							if [[ $gfxcur = $nvidialegcb ]]
+							then
+								( flagupdate ; removepkg $nvidialegacypkgs ; installpkg $nvidiapkgs ; finmsg ) | logbox 
+								flagchange
+							fi
+							if [[ $gfxcur = $nouveaucb ]]
+							then
+								( flagupdate ; installpkg $nvidiapkgs ; finmsg ) | logbox 
+								flagchange
+							fi
+						fi
+						if [[ $option = $nouveaucb ]]
+						then
+							if [[ $gfxcur = $nvidialegcb ]] 
+							then
+								( flagupdate ; removepkg $nvidialegacypkgs $nvidiarem ; finmsg ) | logbox 
+								flagchange
+							fi
+							if [[ $gfxcur = $nvidiacb ]]
+							then
+								( flagupdate ; removepkg $nvidiapkgs $nvidiarem ; finmsg ) | logbox 
+								flagchange
+							fi
+						fi
+						if [[ $option = $nvidialegcb ]]
+						then
+							if [[ $gfxcur = $nouveaucb ]]
+							then
+								( flagupdate ; installpkg $nvidialegacypkgs ; finmsg ) | logbox 
+								flagchange
+							fi
+							if [[ $gfxcur = $nvidiacb ]]
+							then
+								( removepkg $nvidiapkgs && installpkg $nvidialegacypkgs ; finmsg ) | logbox 
+								flagchange
+							fi
+						fi
+
+					elif [[ $gfxsys = $optimus ]]
+					then
+						if [[ $option = $intoptmscb ]]
+						then
+							if [[ $gfxcur = $nvidoptmscb ]]
+							then
+								( flagupdate ; removepkg $bbeenonfree ; bbeelaunchers default ; finmsg ) | logbox 
+								flagchange
+							fi
+							if [[ $gfxcur = $nouvoptmscb ]]
+							then
+								( flagupdate ; removepkg $bbeefree ; bbeelaunchers default ; finmsg ) | logbox 
+								flagchange
+							fi
+						fi
+						if [[ $option = $nouvoptmscb ]]
+						then
+							if [[ $gfxcur = $intoptmscb ]] 
+							then
+								( flagupdate ; setupbbeerepo && installpkg $bbeedeps $bbeefree ; bbeelaunchers optirun ; finmsg ) | logbox 
+								flagchange
+							fi
+							if [[ $gfxcur = $nvidoptmscb ]]
+							then
+								( flagupdate ; setupbbeerepo && removepkg $bbeenonfree && installpkg $bbeefree ; bbeelaunchers optirun ; finmsg ) | logbox 
+								flagchange
+							fi
+						fi
+						if [[ $option = $nvidoptmscb ]]
+						then
+							if [[ $gfxcur = $intoptmscb ]] 
+							then
+								( flagupdate ; setupbbeerepo && installpkg $bbeedeps $bbeenonfree ; bbeelaunchers primusrun ; finmsg ) | logbox 
+								flagchange
+							fi
+							if [[ $gfxcur = $nouvoptmscb ]]
+							then
+								( flagupdate ; setupbbeerepo && removepkg $bbeefree && installpkg $bbeenonfree ; bbeelaunchers primusrun ; finmsg ) | logbox 
+								flagchange
+							fi
+						fi
+				   	fi )
+					if [[ -f $changeflag ]]
+					then
+						rebootprompt
+					fi
+				else
+					infotext="No change to apply"
+					infobox
+					break
+				fi
+			;;
+			esac
+		done
+	;;
+	3)
+		while :
+		do
+			out=$(pcibrowser)
+			opt=$( echo $out | tr -d "\|" )
+			optdesc="<span size=\"x-large\">$( head -1 ${devcachedir}/${opt} | cut -d: -f3 | cut -d"(" -f1 ) Details</span>"
+			choice=$(cat $tmp)
+			>$tmp
+			case $choice in
+			1)
+				break
+			;;
+			2)
+				infoview $opt "$optdesc"
+			;;
+			esac
+		done
+	;;
+	4)
+		while :
+		do
+			out=$(usbbrowser)
+			opt=$( echo $out | tr -d "\|" )
+			optdesc="<span size=\"x-large\">$( head -1 ${devcachedir}/${opt} | cut -d" " -f7- | cut -d"(" -f1 ) Details</span>"
+			choice=$(cat $tmp)
+			>$tmp
+			case $choice in
+			1)
+				break
+			;;
+			2)
+				infoview $opt
+			;;
+			esac
+		done
+	;;
+	
+	esac
+
+	rm -f $tmp
+done 
+
+
