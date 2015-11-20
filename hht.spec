@@ -1,10 +1,11 @@
-Summary:        A hardware inspection and graphics driver management tool
+Summary:        A simple hardware inspection and driver management tool
 Name:           hht
 Version:        0.1
-Release:        1
+Release:        2
 License:        MIT
 URL:            https://chapeaulinux.org
-Source:         %{name}.tar.bz2
+Source:         %{name}.tar.gz
+BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root
 BuildArch:      noarch
 
 Requires:	yad
@@ -13,25 +14,31 @@ Requires:	chapeau-repos
 Requires:	polkit
 
 %description
-The Hardware Helper Tool allows a user to inspect the hardware information of their
-system and makes it easy to change graphics driver configuration for certain GPUs.
+Inspect your system's hardware information and configure third-party drivers.
 
 %prep
-%setup -q
+%setup -q -c -n hht
 
 %build
 
 %install
-install -d -m 755 $RPM_BUILD_ROOT/usr/share/hht
-install -m 755 hht $RPM_BUILD_ROOT/usr/bin/
-install -m 755 hht.conf $RPM_BUILD_ROOT/etc/
-install -m 644 hht_left_banner.png $RPM_BUILD_ROOT/usr/share/hht/
+mkdir -p %{buildroot}/usr/share/hht
+mkdir -p %{buildroot}/etc
+mkdir -p %{buildroot}/usr/bin
+mkdir -p %{buildroot}/usr/share/applications
+install -p hht %{buildroot}/usr/bin
+install -p hht.desktop %{buildroot}/usr/share/applications
+install -p hht.conf %{buildroot}/etc
+install -p hht_left_banner.png %{buildroot}/usr/share/hht/
+
+%post
+test -f %{_datadir}/applications/driver_helper.desktop && rm -f %{_datadir}/applications/driver_helper.desktop
 
 %files
-%defattr(-,root,root,-)
-%dir /usr/share/hht
-%config /etc/hht.conf
-/usr/bin/hht
+%config %attr(775, root, root) /etc/hht.conf
+%attr(775, root, root) /usr/bin/hht
+%attr(644, root, root) /usr/share/hht/hht_left_banner.png
+%attr(644, root, root) /usr/share/applications/hht.desktop
 
 %changelog
 * Sat Oct 31 2015 Vince Pooley <vince@chapeaulinux.org>

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Hardware Helper Tool v0.1
+# Hardware Helper Tool v0.1.1
 
 ## Variables
 # Paths
@@ -21,7 +21,7 @@ distro=Chapeau
 # Files
 config=/etc/hht.conf
 dialogue=${ubin}/${dname}
-pm=${ubin}/dnf
+pm=${ubin}/pkcon
 rpm=${ubin}/rpm
 lsusb=${ubin}/lsusb
 lspci=${usbin}/lspci
@@ -592,7 +592,7 @@ installpkg ()
 	echo "Installing requested packages;" | tee -a $pkglog
 	echo "$pk" | tee -a $pkglog
 	echo "-----------------------------------------------" | tee -a $pkglog
-	$pm -y --nogpgcheck install $pk 2>&1 | tee -a $pkglog
+	$pm -y install $pk 2>&1 | tee -a $pkglog
 	if [[ ${PIPESTATUS[0]} -ne 0 ]]
 	then
 		errorbox
@@ -608,7 +608,7 @@ removepkg ()
 	echo "Removing requested packages;" | tee -a $pkglog
 	echo "$pk" | tee -a $pkglog
 	echo "-----------------------------------------------" | tee -a $pkglog
-	$pm -y --nogpgcheck remove $* 2>&1 | tee -a $pkglog
+	$pm -y remove $* 2>&1 | tee -a $pkglog
 	if [[ ${PIPESTATUS[0]} -ne 0 ]]
 	then
 		errorbox
@@ -667,11 +667,11 @@ bbeelaunchers ()
 		sed -i "s/^Exec=.*steam /Exec=${arg} steam /g" /home/*/.local/share/applications/*desktop
 		if [[ -f /usr/share/applications/steam.desktop ]]
 		then
-			sed -e "s/^Exec=.*steam /Exec=${arg} steam /g" -e "s/^Name=Steam/Name=Steam (${arg})/g" /usr/share/applications/steam.desktop >/usr/share/applications/${arg}-steam.desktop
+			$sudo sed -e "s/^Exec=.*steam /Exec=${arg} steam /g" -e "s/^Name=Steam/Name=Steam (${arg})/g" /usr/share/applications/steam.desktop >/usr/share/applications/${arg}-steam.desktop
 		fi
 		if [[ -f /usr/share/applications/PlayOnLinux.desktop ]]
 		then
-			sed -e "s/^Exec=playonlinux/Exec=${arg} playonlinux/g" -e "s/^Name=PlayOnLinux/Name=PlayOnLinux (${arg})/g" /usr/share/applications/PlayOnLinux.desktop >/usr/share/applications/${arg}-PlayOnLinux.desktop
+			$sudo sed -e "s/^Exec=playonlinux/Exec=${arg} playonlinux/g" -e "s/^Name=PlayOnLinux/Name=PlayOnLinux (${arg})/g" /usr/share/applications/PlayOnLinux.desktop >/usr/share/applications/${arg}-PlayOnLinux.desktop
 		fi
 		echo " ... done"
 		echo
@@ -683,7 +683,7 @@ bbeelaunchers ()
 		echo
 		echo -e "\n\nRemoving any Bumblebee prefixes from Steam & PlayonLinux desktop icons"
 		sed -i "s/^Exec=.*steam /Exec=steam /g" /home/*/.local/share/applications/*desktop
-		rm -f /usr/share/applications/*-steam.desktop /usr/share/applications/*-PlayOnLinux.desktop
+		$sudo rm -f /usr/share/applications/*-steam.desktop /usr/share/applications/*-PlayOnLinux.desktop
 		echo " ... done"
 		echo
 		echo
@@ -855,15 +855,15 @@ then
 fi
 
 ## root privs
-if [[ $(id -u) != 0 ]]
-then
-	$sudo
-	if [[ $? != 0 ]]
-	then
-		echo "$this needs root privileges"
-		exit 1
-	fi
-fi
+#if [[ $(id -u) != 0 ]]
+#then
+	#$sudo
+	#if [[ $? != 0 ]]
+	#then
+		#echo "$this needs root privileges"
+		#exit 1
+	#fi
+#fi
 
 ## Check/create working directories
 
