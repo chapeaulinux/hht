@@ -1,5 +1,5 @@
 #!/bin/sh
-# Hardware Helper Tool v0.1.1
+# Hardware Helper Tool v0.1.3
 
 ## Variables
 # Paths
@@ -113,15 +113,12 @@ gfximg=${shared}/hht_left_banner.png
 distimg=/usr/share/pixmaps/fedora-logo-small.png
 
 # Packages
-nvidiapkgs="akmod-nvidia vdpauinfo libva-vdpau-driver libva-utils xorg-x11-drv-nvidia-libs.i686"
-nvidiarem="nvidia-kmod"
-nvidialegacypkgs="akmod-nvidia-340xx xorg-x11-drv-nvidia-340xx-libs.i686"
 nvlegver=340
-bbeefreerepo="http://install.linux.ncsu.edu/pub/yum/itecs/public/bumblebee/fedora22/noarch/bumblebee-release-1.2-1.noarch.rpm"
-bbeenonfreerepo="http://install.linux.ncsu.edu/pub/yum/itecs/public/bumblebee-nonfree/fedora22/noarch/bumblebee-nonfree-release-1.2-1.noarch.rpm"
-bbeedeps="libbsd-devel libbsd glibc-devel libX11-devel help2man autoconf git tar glib2 glib2-devel kernel-devel kernel-headers automake gcc gtk2-devel"
-bbeefree="bbswitch-dkms bumblebee-nouveau"
-bbeenonfree="bbswitch-dkms bumblebee-nvidia.${arch} VirtualGL.${arch} VirtualGL.i686 primus.${arch} primus.i686"
+nvidiacurrent="chapeau-nvidia-current"
+nvidiarem="nvidia-kmod"
+nvidialegacy="chapeau-nvidia-legacy"
+bbeefree="chapeau-bumblebee-free"
+bbeenonfree="chapeau-bumblebee-nonfree"
 
 # Graphics Configuration Descriptions
 nvidiagfx="Nvidia graphics"
@@ -1011,12 +1008,12 @@ do
 						then
 							if [[ $gfxcur = $nvidialegcb ]]
 							then
-								( flagupdate ; removepkg $nvidialegacypkgs ; installpkg $nvidiapkgs ; finmsg ) | logbox 
+								( flagupdate ; removepkg $nvidialegacy ; installpkg $nvidiacurrent ; finmsg ) | logbox 
 								flagchange
 							fi
 							if [[ $gfxcur = $nouveaucb ]]
 							then
-								( flagupdate ; installpkg $nvidiapkgs ; finmsg ) | logbox 
+								( flagupdate ; installpkg $nvidiacurrent ; finmsg ) | logbox 
 								flagchange
 							fi
 						fi
@@ -1024,12 +1021,12 @@ do
 						then
 							if [[ $gfxcur = $nvidialegcb ]] 
 							then
-								( flagupdate ; removepkg $nvidialegacypkgs $nvidiarem ; finmsg ) | logbox 
+								( flagupdate ; removepkg $nvidialegacy $nvidiarem ; finmsg ) | logbox 
 								flagchange
 							fi
 							if [[ $gfxcur = $nvidiacb ]]
 							then
-								( flagupdate ; removepkg $nvidiapkgs $nvidiarem ; finmsg ) | logbox 
+								( flagupdate ; removepkg $nvidiacurrent $nvidiarem ; finmsg ) | logbox 
 								flagchange
 							fi
 						fi
@@ -1037,12 +1034,12 @@ do
 						then
 							if [[ $gfxcur = $nouveaucb ]]
 							then
-								( flagupdate ; installpkg $nvidialegacypkgs ; finmsg ) | logbox 
+								( flagupdate ; installpkg $nvidialegacy ; finmsg ) | logbox 
 								flagchange
 							fi
 							if [[ $gfxcur = $nvidiacb ]]
 							then
-								( removepkg $nvidiapkgs && installpkg $nvidialegacypkgs ; finmsg ) | logbox 
+								( removepkg $nvidiacurrent && installpkg $nvidialegacy ; finmsg ) | logbox 
 								flagchange
 							fi
 						fi
@@ -1066,12 +1063,12 @@ do
 						then
 							if [[ $gfxcur = $intoptmscb ]] 
 							then
-								( flagupdate ; setupbbeerepo && installpkg $bbeedeps $bbeefree ; bbeelaunchers optirun ; finmsg ) | logbox 
+								( flagupdate ; installpkg $bbeefree ; bbeelaunchers optirun ; finmsg ) | logbox 
 								flagchange
 							fi
 							if [[ $gfxcur = $nvidoptmscb ]]
 							then
-								( flagupdate ; setupbbeerepo && removepkg $bbeenonfree && installpkg $bbeefree ; bbeelaunchers optirun ; finmsg ) | logbox 
+								( flagupdate ; removepkg $bbeenonfree && installpkg $bbeefree ; bbeelaunchers optirun ; finmsg ) | logbox 
 								flagchange
 							fi
 						fi
@@ -1079,12 +1076,12 @@ do
 						then
 							if [[ $gfxcur = $intoptmscb ]] 
 							then
-								( flagupdate ; setupbbeerepo && installpkg $bbeedeps $bbeenonfree ; bbeelaunchers primusrun ; finmsg ) | logbox 
+								( flagupdate ; installpkg $bbeenonfree ; bbeelaunchers primusrun ; finmsg ) | logbox 
 								flagchange
 							fi
 							if [[ $gfxcur = $nouvoptmscb ]]
 							then
-								( flagupdate ; setupbbeerepo && removepkg $bbeefree && installpkg $bbeenonfree ; bbeelaunchers primusrun ; finmsg ) | logbox 
+								( flagupdate ; removepkg $bbeefree && installpkg $bbeenonfree ; bbeelaunchers primusrun ; finmsg ) | logbox 
 								flagchange
 							fi
 						fi
