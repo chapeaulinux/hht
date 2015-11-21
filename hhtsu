@@ -1,0 +1,8 @@
+#!/bin/sh
+# Super user wrapper for Hardware Helper Tool
+
+pkexec /usr/bin/hht
+es=$?
+
+exit $es
+
