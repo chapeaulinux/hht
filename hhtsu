@@ -1,8 +1,21 @@
 #!/bin/sh
 # Super user wrapper for Hardware Helper Tool
 
+tmp=/tmp/hhtsu.tmp
+
+if [[ -n "$DISPLAY" ]]
+then
+	echo "export DISPLAY=${DISPLAY}" >$tmp
+	chmod +x $tmp
+fi
+
 pkexec /usr/bin/hht
 es=$?
+
+if [[ -f $tmp ]]
+then
+	rm -f $tmp
+fi
 
 exit $es
 

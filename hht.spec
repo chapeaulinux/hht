@@ -1,7 +1,7 @@
 Summary:        A simple hardware inspection and driver management tool
 Name:           hht
 Version:        0.1
-Release:        4
+Release:        5
 License:        MIT
 URL:            https://chapeaulinux.org
 Source:         %{name}.tar.gz
@@ -44,6 +44,9 @@ test -f %{_datadir}/applications/driver_helper.desktop && rm -f %{_datadir}/appl
 %attr(644, root, root) /usr/share/applications/hht.desktop
 
 %changelog
+* Sat Nov 21 2015 Vince Pooley <vince@chapeaulinux.org>
+- Passthrough of DISPLAY variable from hhtsu to hht
+
 * Sat Nov 21 2015 Vince Pooley <vince@chapeaulinux.org>
 - Update spec changelog.
 - Added requirement for usbutils package.

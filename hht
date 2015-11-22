@@ -1,5 +1,5 @@
 #!/bin/sh
-# Hardware Helper Tool v0.1.4
+# Hardware Helper Tool v0.1.5
 
 ## Variables
 # Paths
@@ -28,6 +28,7 @@ lspci=${usbin}/lspci
 log=${logdir}/hht_${today}.log
 pkglog=${logdir}/pkg_${today}_$$.log
 tmp=${logdir}/tmp.$$
+hhtsutmp=/tmp/hhtsu.tmp
 pcicache=${devcachedir}/pcidevices.list
 usbcache=${devcachedir}/usbdevices.list
 devlist=${devcachedir}/devices.list
@@ -58,10 +59,6 @@ alertwidth=250
 mainmargin=10
 export wtitle="$dist Hardware Helper Tool"
 export monofont="Liberation Mono Regular"
-if [[ -z "$DISPLAY" ]]
-then
-	export DISPLAY=:0
-fi
 
 # Images
 gnome_16=/usr/share/icons/gnome/16x16
@@ -139,6 +136,10 @@ nouvoptmscb="$optimus (with ${nouveaucb})"
 
 # Configurables
 autorefreshdays=1
+if [[ -z "$DISPLAY" ]]
+then
+	. $hhtsutmp
+fi
 if [[ -r $config ]] && [[ -s $config ]]
 then
 	. $config
