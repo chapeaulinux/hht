@@ -1,7 +1,7 @@
 Summary:        A simple hardware inspection and driver management tool
 Name:           hht
 Version:        0.1
-Release:        5
+Release:        6
 License:        MIT
 URL:            https://chapeaulinux.org
 Source:         %{name}.tar.gz
@@ -44,6 +44,9 @@ test -f %{_datadir}/applications/driver_helper.desktop && rm -f %{_datadir}/appl
 %attr(644, root, root) /usr/share/applications/hht.desktop
 
 %changelog
+* Wed Dec 9 2015 Vince Pooley <vince@chapeaulinux.org>
+- Be more specific when checking for Optimus, testing for PCI vendor codes and Nvidia Mobile model strings ending in 'M'
+
 * Sat Nov 21 2015 Vince Pooley <vince@chapeaulinux.org>
 - Passthrough of DISPLAY variable from hhtsu to hht
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Hardware Helper Tool v0.1.5
+# Hardware Helper Tool v0.1.6
 
 ## Variables
 # Paths
@@ -297,7 +297,8 @@ refresh ()
 
 	if [[ $(echo "$gpus" | wc -l) -gt 1 ]]
 	then
-		if [[ -n "$(echo $gpus | grep -io intel)" ]] && [[ -n "$(echo $gpus | grep -io nvidia)" ]]
+		#if [[ -n "$(echo $gpus | grep -io intel)" ]] && [[ -n "$(echo $gpus | grep -io nvidia)" ]]
+		if [[ "$($lspci -vnn | grep '\''[030[02]\]' | wc -l)" = "2" ]] && [[ -n "$($lspci -vnn | grep -E '\[0302\].*[0-9]{3}M')" ]]
 		then
 			gfxsys=$optimus
 			echo $gfxsys > $gfxsystmp
