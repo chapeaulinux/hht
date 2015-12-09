@@ -1,5 +1,5 @@
 #!/bin/sh
-# Hardware Helper Tool v0.1.6
+# Hardware Helper Tool v0.1.7
 
 ## Variables
 # Paths
@@ -295,8 +295,8 @@ refresh ()
 	unset gfxcb gfxcur
 	rec=0
 
-	if [[ $(echo "$gpus" | wc -l) -gt 1 ]]
-	then
+	#if [[ $(echo "$gpus" | wc -l) -gt 1 ]]
+	#then
 		#if [[ -n "$(echo $gpus | grep -io intel)" ]] && [[ -n "$(echo $gpus | grep -io nvidia)" ]]
 		if [[ "$($lspci -vnn | grep '\''[030[02]\]' | wc -l)" = "2" ]] && [[ -n "$($lspci -vnn | grep -E '\[0302\].*[0-9]{3}M')" ]]
 		then
@@ -318,7 +318,7 @@ refresh ()
 				gfxcur=$intoptmscb
 				gfxcb="^Current: ${intoptmscb}!${nvidoptmscb}!${nouvoptmscb}"
 			fi
-		fi
+		#fi
 	else
 		if [[ -n "$(echo $gpus | grep -io nvidia)" ]]
 		then
