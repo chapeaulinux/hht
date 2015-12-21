@@ -46,6 +46,7 @@ test -f %{_datadir}/applications/driver_helper.desktop && rm -f %{_datadir}/appl
 %changelog
 * Mon Dec 21 2015 Vince Pooley <vince@chapeaulinux.org>
 - Fixed the setup of the Bumblebee repos before installing the bumblebee packages
+- Use device vendor & class to determine GPU type for Optimus detection.
 
 * Thu Dec 10 2015 Vince Pooley <vince@chapeaulinux.org>
 - Commented lines 288,299,321. Incorrect assumption that Nvidia + Intel = Optimus.

@@ -297,11 +297,8 @@ refresh ()
 	unset gfxcb gfxcur
 	rec=0
 
-	#if [[ $(echo "$gpus" | wc -l) -gt 1 ]]
-	#then
-		#if [[ -n "$(echo $gpus | grep -io intel)" ]] && [[ -n "$(echo $gpus | grep -io nvidia)" ]]
-		if [[ "$($lspci -vnn | grep '\''[030[02]\]' | wc -l)" = "2" ]] && [[ -n "$($lspci -vnn | grep -E '\[0302\].*[0-9]{3}M')" ]]
-		then
+	if [[ -n "$($lspci -nn -d 8086::0300)" ]] && [[ -n "$($lspci -nn -d 10de::0300 | grep -E '[0-9]{3}M')" ]] || [[ -n "$($lspci -nn -d 10de::0302 | grep -E '[0-9]{3}M')" ]]
+	then
 			gfxsys=$optimus
 			echo $gfxsys > $gfxsystmp
 			if [[ -n "$intel" ]] && [[ -n "$nvidia" ]] && [[ -n "$nouveau" ]] && [[ -n "$bbeeinstalled" ]]
@@ -320,7 +317,6 @@ refresh ()
 				gfxcur=$intoptmscb
 				gfxcb="^Current: ${intoptmscb}!${nvidoptmscb}!${nouvoptmscb}"
 			fi
-		#fi
 	else
 		if [[ -n "$(echo $gpus | grep -io nvidia)" ]]
 		then
