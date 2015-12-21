@@ -1,7 +1,7 @@
 Summary:        A simple hardware inspection and driver management tool
 Name:           hht
 Version:        0.1
-Release:        7
+Release:        8
 License:        MIT
 URL:            https://chapeaulinux.org
 Source:         %{name}.tar.gz
@@ -44,6 +44,9 @@ test -f %{_datadir}/applications/driver_helper.desktop && rm -f %{_datadir}/appl
 %attr(644, root, root) /usr/share/applications/hht.desktop
 
 %changelog
+* Mon Dec 21 2015 Vince Pooley <vince@chapeaulinux.org>
+- Fixed the setup of the Bumblebee repos before installing the bumblebee packages
+
 * Thu Dec 10 2015 Vince Pooley <vince@chapeaulinux.org>
 - Commented lines 288,299,321. Incorrect assumption that Nvidia + Intel = Optimus.
 - Now that Optimus test is more specific to 'M' GPUs we don't need this initial test.
