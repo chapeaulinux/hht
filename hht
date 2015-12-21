@@ -1,5 +1,5 @@
 #!/bin/sh
-# Hardware Helper Tool v0.1.7
+# Hardware Helper Tool v0.1.8
 
 ## Variables
 # Paths
@@ -120,6 +120,8 @@ nvidiarem="nvidia-kmod"
 nvidialegacy="chapeau-nvidia-legacy"
 bbeefree="chapeau-bumblebee-free"
 bbeenonfree="chapeau-bumblebee-nonfree"
+bbeefreerepo="bumblebee-release"
+bbeenonfreerepo="bumblebee-nonfree-release"
 
 # Graphics Configuration Descriptions
 nvidiagfx="Nvidia graphics"
@@ -1069,12 +1071,12 @@ do
 						then
 							if [[ $gfxcur = $intoptmscb ]] 
 							then
-								( flagupdate ; installpkg $bbeefree ; bbeelaunchers optirun ; finmsg ) | logbox 
+								( flagupdate ; setupbbeerepo ; installpkg $bbeefree ; bbeelaunchers optirun ; finmsg ) | logbox 
 								flagchange
 							fi
 							if [[ $gfxcur = $nvidoptmscb ]]
 							then
-								( flagupdate ; removepkg $bbeenonfree && installpkg $bbeefree ; bbeelaunchers optirun ; finmsg ) | logbox 
+								( flagupdate ; setupbbeerepo ; removepkg $bbeenonfree && installpkg $bbeefree ; bbeelaunchers optirun ; finmsg ) | logbox 
 								flagchange
 							fi
 						fi
@@ -1082,12 +1084,12 @@ do
 						then
 							if [[ $gfxcur = $intoptmscb ]] 
 							then
-								( flagupdate ; installpkg $bbeenonfree ; bbeelaunchers primusrun ; finmsg ) | logbox 
+								( flagupdate ; setupbbeerepo ; installpkg $bbeenonfree ; bbeelaunchers primusrun ; finmsg ) | logbox 
 								flagchange
 							fi
 							if [[ $gfxcur = $nouvoptmscb ]]
 							then
-								( flagupdate ; removepkg $bbeefree && installpkg $bbeenonfree ; bbeelaunchers primusrun ; finmsg ) | logbox 
+								( flagupdate ; setupbbeerepo ; removepkg $bbeefree && installpkg $bbeenonfree ; bbeelaunchers primusrun ; finmsg ) | logbox 
 								flagchange
 							fi
 						fi
