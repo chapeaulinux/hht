@@ -1,5 +1,5 @@
 #!/bin/sh
-# Hardware Helper Tool v0.1.8
+# Hardware Helper Tool v0.1.9
 
 ## Variables
 # Paths
@@ -849,7 +849,8 @@ rebootprompt ()
 ## Check deps
 
 dv=$($dialogue --version)
-if [[ $? != 0 ]]
+dtest=$?
+if [[ $dtest != 0 ]] && [[ $dtest != 252 ]]
 then
 	echo "FATAL: $this requires the '$dname' package but it is not installed!" | tee -a $log
 	exit 1
