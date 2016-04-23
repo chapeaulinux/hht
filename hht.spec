@@ -1,7 +1,7 @@
 Summary:        A simple hardware inspection and driver management tool
 Name:           hht
 Version:        0.1
-Release:        8
+Release:        9
 License:        MIT
 URL:            https://chapeaulinux.org
 Source:         %{name}.tar.gz
@@ -44,6 +44,10 @@ test -f %{_datadir}/applications/driver_helper.desktop && rm -f %{_datadir}/appl
 %attr(644, root, root) /usr/share/applications/hht.desktop
 
 %changelog
+* Tue Apr 19 2016 Vince Pooley <vince@chapeaulinux.org>
+- Amended yad initialisation test to pass on both exit status of 0 and 252.
+- This is because Yad's exit status has changed when running 'yad --version' as of Yad 0.35
+
 * Mon Dec 21 2015 Vince Pooley <vince@chapeaulinux.org>
 - Fixed the setup of the Bumblebee repos before installing the bumblebee packages
 - Use device vendor & class to determine GPU type for Optimus detection.
