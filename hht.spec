@@ -1,7 +1,7 @@
 Summary:        A simple hardware inspection and driver management tool
 Name:           hht
 Version:        0.1
-Release:        9
+Release:        10
 License:        MIT
 URL:            https://chapeaulinux.org
 Source:         %{name}.tar.gz
@@ -34,7 +34,7 @@ install -p hht.conf %{buildroot}/etc
 install -p hht_left_banner.png %{buildroot}/usr/share/hht/
 
 %post
-test -f %{_datadir}/applications/driver_helper.desktop && rm -f %{_datadir}/applications/driver_helper.desktop
+test -f %{_datadir}/applications/driver_helper.desktop && rm -f %{_datadir}/applications/driver_helper.desktop || true
 
 %files
 %config %attr(775, root, root) /etc/hht.conf
@@ -44,6 +44,10 @@ test -f %{_datadir}/applications/driver_helper.desktop && rm -f %{_datadir}/appl
 %attr(644, root, root) /usr/share/applications/hht.desktop
 
 %changelog
+* Sun Sep 25 2016 Vince Pooley <vince@chapeaulinux.org>
+- Added the 'xhost' command to hhtsu script to grant the root user access to user's X session before running hht, required as of c24
+- Added 'true' command to spec's post script to avoid non-zero exit status being reported by as an error by rpm
+
 * Tue Apr 19 2016 Vince Pooley <vince@chapeaulinux.org>
 - Amended yad initialisation test to pass on both exit status of 0 and 252.
 - This is because Yad's exit status has changed when running 'yad --version' as of Yad 0.35
