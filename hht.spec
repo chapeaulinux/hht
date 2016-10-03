@@ -1,7 +1,7 @@
 Summary:        A simple hardware inspection and driver management tool
 Name:           hht
 Version:        0.1
-Release:        10
+Release:        11
 License:        MIT
 URL:            https://chapeaulinux.org
 Source:         %{name}.tar.gz
@@ -13,6 +13,7 @@ Requires:	dnf
 Requires:	chapeau-repos
 Requires:	polkit
 Requires:	usbutils
+Requires:	pciutils
 
 %description
 Inspect your system's hardware information and configure third-party drivers.
